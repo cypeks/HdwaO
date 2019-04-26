@@ -1,0 +1,8 @@
+LEDPwm	KEYWORD1
+ustaw	KEYWORD2
+ustaw	KEYWORD2
+ustawPwm	KEYWORD2
+pobierzPwm	KEYWORD2
+pobierzMax	KEYWORD2
+pobierzRewers	KEYWORD2
+Update	KEYWORD2

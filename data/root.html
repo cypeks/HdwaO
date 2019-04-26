@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.css">
+    <link rel="stylesheet" href="/css/clock.css">
+
+    <style>
+    @font-face {
+      font-family: 'Material Icons';
+      font-style: normal;
+      font-weight: 400;
+      src: local('Material Icons'),
+      local('MaterialIcons-Regular'),
+      url('/fonts/material.woff2') format('woff2');
+    }
+    .material-icons {
+      font-family: 'Material Icons';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;  /* Preferred icon size */
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+      /* Support for all WebKit browsers. */
+      -webkit-font-smoothing: antialiased;
+      /* Support for Safari and Chrome. */
+      text-rendering: optimizeLegibility;
+      /* Support for Firefox. */
+      -moz-osx-font-smoothing: grayscale;
+      /* Support for IE. */
+      font-feature-settings: 'liga';
+    }
+    </style>
+    <script>
+        window.ilepwm = 8; //wpisac ilosc kanalow PWM
+    </script>
+    <title>HdwaO</title>
+  </head>
+  <body>
+    <div class="container">
+      <ul class="nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false"><i class="material-icons">menu</i></a>
+          <div class="dropdown-menu">
+            <a class="dropdown-item" href="#nav-swiatlo" data-toggle="tab"><i class="material-icons" style="vertical-align:text-bottom;">wb_sunny</i>&nbsp;Światło</a>
+            <a class="dropdown-item" href="#nav-ustawienia" data-toggle="tab"><i class="material-icons" style="vertical-align:text-bottom;">settings</i>&nbsp;Ustawienia</a>
+            <a class="dropdown-item" href="#nav-informacje" data-toggle="tab"><i class="material-icons" style="vertical-align:text-bottom;">info</i>&nbsp;Informacje</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="/update"><i class="material-icons" style="vertical-align:text-bottom;">present_to_all</i>Aktualizacja</a>
+          </div>
+        </li>
+      </ul>
+      <div class="tab-content" id="nav-tabContent">
+        <!-- ŚWIATŁO -->
+        <div class="tab-pane fade show active" id="nav-swiatlo" role="tabpanel" aria-labelledby="nav-home-tab">
+          Światło
+          <script>console.log("start swiatlo");</script>
+        </div>
+        <!-- USTAWIENIA -->
+        <div class="tab-pane fade" id="nav-ustawienia" role="tabpanel" aria-labelledby="nav-profile-tab">
+          Ustawienia
+        </div>
+        <!-- INFORMACJE -->
+        <div class="tab-pane fade" id="nav-informacje" role="tabpanel" aria-labelledby="nav-contact-tab">
+          Informacje
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional JavaScript -->
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="/js/jquery.js"></script>
+    <script src="/js/bootstrap.js"></script>
+    <script src="/js/hdwao.js"></script>
+    <script src="/js/moment.js"></script>
+    <script src="/js/clock.js"></script>
+    <script>
+//---menu---
+      $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).attr("href"); // activated tab
+        console.log(target);
+        switch(target) {
+          case '#nav-swiatlo':
+            swiatlo_menu();
+            break;
+          case '#nav-ustawienia':
+            ustawienia_menu();
+            break;
+          case '#nav-informacje':
+            informacje_menu();
+            break;
+        }
+      });
+//---pierwsze uruchomienie---
+      konstruktor();
+//---trigger---
+      //---zmiana PWM---
+      $('.pwm').change(function() {
+        $('#label-'+$(this).prop('id')).text($(this).prop('value'));
+      });
+      //---wł/wył kanał---
+      $('.swpwm').change(function() {
+        var id = $(this).prop('id');
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('checked');
+        console.log(id+' '+val);
+        $.ajax({
+        		type: 'POST',
+        		url:'/onoff.json',
+        		dataType : 'json',
+        		data: { id: id, val: val },
+        		success: function(result) {
+        			$('#pwm'+id).val(result.pwm);
+        			//console.log('ON/OFF sukces PWM: '+result.pwm);
+        		},
+        		error: function(jqXHR, errorText, errorThrown) { console.log('ON/OFF: '+errorText);	}
+        	});
+      });
+      //---godzina włączenia---
+      $('.wlacz').change(function() {
+        var id = $(this).prop('id');
+        var typ = id.substring(0,id.length - 1);
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('value');
+        console.log(id+' '+typ+' '+val);
+        konfigpwm_json(id,typ,val);
+      });
+      //---godzina wyłączenia---
+      $('.wylacz').change(function() {
+        var id = $(this).prop('id');
+        var typ = id.substring(0,id.length - 1);
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('value');
+        console.log(id+' '+typ+' '+val);
+        konfigpwm_json(id,typ,val);
+      });
+      //---czas wsch/zach---
+      $('.czas').change(function() {
+        var id = $(this).prop('id');
+        var typ = id.substring(0,id.length - 1);
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('value');
+        console.log(id+' '+typ+' '+val);
+        konfigpwm_json(id,typ,val);
+      });
+      //---max PWM---
+      $('.maxpwm').change(function() {
+        var id = $(this).prop('id');
+        var typ = id.substring(0,id.length - 1);
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('value');
+        console.log(id+' '+typ+' '+val);
+        konfigpwm_json(id,typ,val);
+      });
+      //---odwr. PWM---
+      $('.odwrpwm').change(function() {
+        var id = $(this).prop('id');
+        var typ = id.substring(0,id.length - 1);
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('checked');
+        console.log(id+' '+typ+' '+val);
+        konfigpwm_json(id,typ,val);
+      });
+      //---ustaw date godzine---
+      $('#data_godzina').change(function() {
+        var buf = $(this).prop('value');
+        var regex = /[\/, ]/gi;
+        var data_godzina = buf.replace(regex, ':').split(':');
+        $.ajax({
+        		type: 'POST',
+        		url:'/ustaw_data_godz.json',
+        		dataType : 'json',
+        		data: { rok: data_godzina[0],miesiac: data_godzina[1],dzien: data_godzina[2],godzina: data_godzina[3],minuta: data_godzina[4] },
+        		success: function(result) {
+        			//console.log(result);
+        		},
+        		error: function(jqXHR, errorText, errorThrown) { console.log('data_godzina: '+errorText);	}
+        	});
+      });
+      //---reset WiFi---
+      $('#resetWiFiOK').on('click', function() {
+        console.log('reset WiFi');
+        $('#resetWiFiModal').modal('hide');
+        $('#infoWiFiModal').modal('show');
+      });
+    </script>
+  </body>
+</html>
