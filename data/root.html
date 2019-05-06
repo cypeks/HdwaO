@@ -63,7 +63,6 @@
         <!-- ŚWIATŁO -->
         <div class="tab-pane fade show active" id="nav-swiatlo" role="tabpanel" aria-labelledby="nav-home-tab">
           Światło
-          <script>console.log("start swiatlo");</script>
         </div>
         <!-- USTAWIENIA -->
         <div class="tab-pane fade" id="nav-ustawienia" role="tabpanel" aria-labelledby="nav-profile-tab">
@@ -88,7 +87,7 @@
 //---menu---
       $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
         var target = $(e.target).attr("href"); // activated tab
-        console.log(target);
+        //console.log(target);
         switch(target) {
           case '#nav-swiatlo':
             swiatlo_menu();
@@ -116,9 +115,8 @@
         		dataType : 'json',
         		data: { id: id, val: val },
         		success: function(result) {
-        		    //console.log('');
         		},
-        		error: function(jqXHR, errorText, errorThrown) { console.log('ON/OFF: '+errorText);	}
+        		error: function(jqXHR, errorText, errorThrown) { 'pwm: '+console.log(errorText);	}
         	});
       });
       //---wł/wył kanał---
@@ -126,7 +124,6 @@
         var id = $(this).prop('id');
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('checked');
-        console.log(id+' '+val);
         $.ajax({
         		type: 'POST',
         		url:'/onoff.json',
@@ -134,9 +131,8 @@
         		data: { id: id, val: val },
         		success: function(result) {
         			$('#pwm'+id).val(result.pwm);
-        			//console.log('ON/OFF sukces PWM: '+result.pwm);
         		},
-        		error: function(jqXHR, errorText, errorThrown) { console.log('ON/OFF: '+errorText);	}
+        		error: function(jqXHR, errorText, errorThrown) { 'swpwm: '+console.log(errorText);	}
         	});
       });
       //---godzina włączenia---
@@ -145,7 +141,6 @@
         var typ = id.substring(0,id.length - 1);
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('value');
-        console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
       //---godzina wyłączenia---
@@ -154,7 +149,6 @@
         var typ = id.substring(0,id.length - 1);
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('value');
-        console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
       //---czas wsch/zach---
@@ -163,7 +157,6 @@
         var typ = id.substring(0,id.length - 1);
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('value');
-        console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
       //---max PWM---
@@ -172,7 +165,6 @@
         var typ = id.substring(0,id.length - 1);
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('value');
-        console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
       //---odwr. PWM---
@@ -181,7 +173,6 @@
         var typ = id.substring(0,id.length - 1);
         id = id.substring(id.length - 1, id.length);
         var val = $(this).prop('checked');
-        console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
       //---ustaw data godzina---
@@ -195,7 +186,6 @@
         		dataType : 'json',
         		data: { rok: data_godzina[0],miesiac: data_godzina[1],dzien: data_godzina[2],godzina: data_godzina[3],minuta: data_godzina[4] },
         		success: function(result) {
-        			//console.log(result);
               ustawienia_json();
         		},
         		error: function(jqXHR, errorText, errorThrown) { console.log('data_godzina: '+errorText);	}
@@ -210,15 +200,13 @@
         		dataType : 'json',
         		data: { val: val },
         		success: function(result) {
-        			//console.log(result);
               ustawienia_json();
         		},
-        		error: function(jqXHR, errorText, errorThrown) { console.log('data_godzina: '+errorText);	}
+        		error: function(jqXHR, errorText, errorThrown) { console.log('strefa_czasowa: '+errorText);	}
         	});
       });
       //---reset WiFi---
       $('#resetWiFiOK').on('click', function() {
-        console.log('reset WiFi');
         $('#resetWiFiModal').modal('hide');
         $('#infoWiFiModal').modal('show');
       });

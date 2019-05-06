@@ -1,19 +1,16 @@
 function swiatlo_menu(){
-  console.log('swiatlo');
   czysc_interwal();
   swiatlo_json();
   odswiez = setInterval(swiatlo_json, 6000);
 }
 
 function ustawienia_menu(){
-  console.log('ustawienia');
   czysc_interwal();
   ustawienia_json();
   odswiez = setInterval(ustawienia_json, 15000);
 }
 
 function informacje_menu(){
-  console.log('informacje');
   czysc_interwal();
   informacje_json();
 }
@@ -31,7 +28,6 @@ function select_option(a,b,krok){
 }
 
 function swiatlo_json(){
-  console.log('swiatlo_json');
   $.getJSON( '/root.json', function(data) {
     var swiatlo = data.swiatlo;
     for (i = 1; i <= ilepwm; i++) {
@@ -49,7 +45,6 @@ function swiatlo_json(){
 }
 
 function ustawienia_json(){
-  console.log('ustawienia_json');
   $.getJSON( '/ustawienia.json', function(data) {
     var data_godzina = data.data+' '+data.godzina;
       $('#data_godzina').prop('value',data_godzina);
@@ -58,7 +53,6 @@ function ustawienia_json(){
 }
 
 function informacje_json(){
-  console.log('informacje_json');
   $.getJSON( '/info.json', function(data) {
     $('#ver').text(data.ver);
     $('#ilepwm').text(data.ilepwm);
@@ -80,7 +74,6 @@ function konfigpwm_json(id,typ,val){
       success: function(result) {
         $('#pwm'+id).prop('value', result.pwm);
         $('#label-pwm'+id).text(result.pwm);
-        //console.log(result.value);
       },
       error: function(jqXHR, errorText, errorThrown) { console.log('konfigpwm: '+errorText);	}
     });
@@ -90,7 +83,6 @@ function konstruktor(){
   //---swiatlo---
   var html='';
   for (var i = 1; i <= ilepwm; i++) {
-    console.log('ilepwm inc: '+i);
     html += '<div class="custom-control custom-switch ml-1">\
           <input type="checkbox" class="custom-control-input swpwm" role="button" data-toggle="collapse" data-target="#divpwm'+i+'" aria-expanded="false" aria-controls="divpwm'+i+'" id="sw'+i+'" name="divpwm'+i+'">\
           <label class="custom-control-label" for="sw'+i+'"></label>\
