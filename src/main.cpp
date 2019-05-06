@@ -353,8 +353,6 @@ void konfigpwm_json() {
 
   _swiatlo = Swiatlo[i];
 
-  //dt = Rtc.GetDateTime();
-  //dt += gmt;
   pobierzCzas(Ustawienia[3].toInt());
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
 
@@ -488,24 +486,17 @@ void setup() {
   //--ustawienia RTC
   Wire.begin(0, 2); //(D3, D4)
   Rtc.Begin(); // Initialize DS3231
-  //sprawdzGMT();
-  //int gmt = GMT*3600;
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-  //compiled -= gmt;
 
   if (!Rtc.IsDateTimeValid()) {
-    //Rtc.SetDateTime(compiled);
     dt = compiled;
     zapiszCzas(Ustawienia[3].toInt());
   }
   if (!Rtc.GetIsRunning()) {
     Rtc.SetIsRunning(true);
   }
-  //dt = Rtc.GetDateTime();
-  //dt += gmt;
   pobierzCzas(Ustawienia[3].toInt());
   if (dt < compiled) {
-    //Rtc.SetDateTime(compiled);
     dt = compiled;
     zapiszCzas(Ustawienia[3].toInt());
   }
