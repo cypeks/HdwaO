@@ -53,6 +53,7 @@ function ustawienia_json(){
   $.getJSON( '/ustawienia.json', function(data) {
     var data_godzina = data.data+' '+data.godzina;
       $('#data_godzina').prop('value',data_godzina);
+      $('#strefa_czasowa').prop('value',data.strefa_czasowa);
   });
 }
 
@@ -169,8 +170,25 @@ function konstruktor(){
           </div>\
           <div class="row mt-3">\
             <div class="col">\
+              <div class="input-group">\
+                <div class="input-group-prepend">\
+                  <span class="input-group-text"><i class="material-icons">language</i></span>\
+                </div>\
+                  <select class="custom-select mr-sm-2 strefa_czasowa" id="strefa_czasowa">\
+                    <option value="0">UTC - Uniwersalny</option>\
+                    <option value="1">WE - Zachodnio-Europejski</option>\
+                    <option value="2">CE - Środkowo-Europejski</option>\
+                    <option value="3">KE - Kalingradzki</option>\
+                    <option value="4">EE - Wschodnio-Europejski</option>\
+                    <option value="5">MSK - Moskiewski</option>\
+                </select>\
+              </div>\
+            </div>\
+          </div>\
+          <div class="row mt-3">\
+            <div class="col">\
               <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#resetWiFiModal"><i class="material-icons">wifi</i> Reset WiFi</button>\
-              <!-- Modal resetWiFiOK start -->\
+          <!-- Modal resetWiFiOK start -->\
               <div class="modal fade" id="resetWiFiModal" tabindex="-1" role="dialog" aria-labelledby="resetWiFiModalLabel" aria-hidden="true">\
                 <div class="modal-dialog modal-dialog-centered" role="document">\
                   <div class="modal-content">\
@@ -190,8 +208,8 @@ function konstruktor(){
                   </div>\
                 </div>\
               </div>\
-              <!-- Modal resetWiFiOK stop -->\
-              <!-- Modal infoWiFi start -->\
+          <!-- Modal resetWiFiOK stop -->\
+          <!-- Modal infoWiFi start -->\
               <div class="modal fade" id="infoWiFiModal" tabindex="-1" role="dialog" aria-labelledby="infoWiFiModalLabel" aria-hidden="true">\
                 <div class="modal-dialog modal-dialog-centered" role="document">\
                   <div class="modal-content">\
@@ -208,7 +226,7 @@ function konstruktor(){
                   </div>\
                 </div>\
               </div>\
-              <!-- Modal infoWiFi stop -->\
+          <!-- Modal infoWiFi stop -->\
             </div>\
           </div>';
   $('#nav-ustawienia').html(html);

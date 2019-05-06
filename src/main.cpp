@@ -25,7 +25,7 @@ RtcDateTime dt;
 TimeChangeRule utcRule = {"UTC", Last, Sun, Mar, 1, 0};     // UTC
 Timezone UTC(utcRule);
 // Western European Time (London, Belfast)
-TimeChangeRule WEST = {"WEST", Last, Sun, Mar, 1, 60};        // Western European Time Summer Time
+TimeChangeRule WEST = {"WEST", Last, Sun, Mar, 1, 60};      // Western European Time Summer Time
 TimeChangeRule GMT = {"GMT", Last, Sun, Oct, 2, 0};         // Standard Time
 Timezone WE(WEST, GMT);
 // Central European Time (Berlin, Frankfurt, Paris, Warsaw)
@@ -109,7 +109,7 @@ Task l2(3000, TASK_FOREVER, &loop2);
 Task l3(5000, TASK_FOREVER, &loop3);
 Scheduler runner;
 
-#define IU 3 //ilosc ustawien
+#define IU 4 //ilosc ustawien
 String Ustawienia[IU];
 
 String hostname = "HdwaO_";
@@ -135,11 +135,8 @@ void ustawPWM() {
   unsigned int teraz;
   LEDPwm *_swiatlo;
   byte i;
-  //int gmt = GMT*3600;
 
-  //dt = Rtc.GetDateTime();
-  //dt += gmt;
-  pobierzCzas(0);
+  pobierzCzas(Ustawienia[3].toInt());
   teraz = dt.Hour() * 60 + dt.Minute();
 
   for(i=0;i<ilePWM;i++){
@@ -163,61 +160,7 @@ void zapiszPWM() {
   filecfg.print(bufS);
   filecfg.close();
 }
-/*
-void sprawdzGMT() {
-  //int gmt = GMT*3600;
-  byte miesiac, dzien, godzina, tydz, temp;
 
-  dt = Rtc.GetDateTime();
-  miesiac = byte(dt.Month());
-  dzien = byte(dt.Day());
-  godzina = byte(dt.Hour());
-  tydz = dt.DayOfWeek();
-
-  if(miesiac == 1 || miesiac == 2 || miesiac == 11 || miesiac == 12) GMT = 1;
-  if(miesiac > 3 && miesiac < 10) GMT = 2;
-  if(miesiac == 10){
-  if(dzien > 24){
-    if(tydz == 0){
-      if(dzien > 24){
-        if(godzina < 1) GMT = 2;
-        if(godzina >= 1) GMT = 1;
-      }else{
-        GMT = 2;
-      }
-    }else{
-      temp = dzien - tydz;
-      if(temp > 24){
-        GMT = 1;
-      }else{
-        GMT = 2;
-      }
-    }
-  }else{
-    GMT = 2;
-  }}
-  if(miesiac == 3){
-  if(dzien > 24){
-    if(tydz == 0){
-      if(dzien > 24){
-        if(godzina < 1) GMT = 1;
-        if(godzina >= 1) GMT = 2;
-      }else{
-        GMT = 1;
-      }
-    }else{
-      temp = dzien - tydz;
-      if(temp > 24){
-        GMT = 2;
-      }else{
-        GMT = 1;
-      }
-    }
-  }else{
-    GMT = 1;
-  }}
-}
-*/
 void zapiszUstawienia(){
   byte i;
   File filecfg;
@@ -286,7 +229,7 @@ void root_json(){
 void ustawienia_json(){
   String json;
 
-  pobierzCzas(0);
+  pobierzCzas(Ustawienia[3].toInt());
 
   json = "{\"data\":\"";
   json += String(dt.Year());
@@ -303,7 +246,8 @@ void ustawienia_json(){
   json += ":";
   if(dt.Minute()<10) json += "0";
   json += String(dt.Minute());
-  json += "\"";
+  json += "\",";
+  json += "\"strefa_czasowa\":\""+Ustawienia[3]+"\"";
   json += "}";
 
   server.send(200, "application/json", json);
@@ -338,7 +282,6 @@ void onoff_json() {
   String bufS;
   byte i,j;
   boolean val;
-  //int gmt = GMT*3600;
   LEDPwm *_swiatlo;
 
   bufS = server.arg("id");
@@ -350,9 +293,8 @@ void onoff_json() {
   val = bufS.toInt();
   PWM[i][5] = val;
   _swiatlo = Swiatlo[i];
-  //dt = Rtc.GetDateTime();
-  //dt += gmt;
-  pobierzCzas(0);
+
+  pobierzCzas(Ustawienia[3].toInt());
 
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
@@ -365,7 +307,6 @@ void onoff_json() {
 void konfigpwm_json() {
   byte i,j,x;
   String bufS, id, typ, val;
-  //int gmt = GMT*3600;
   LEDPwm *_swiatlo;
 
   id = server.arg("id");
@@ -414,7 +355,7 @@ void konfigpwm_json() {
 
   //dt = Rtc.GetDateTime();
   //dt += gmt;
-  pobierzCzas(0);
+  pobierzCzas(Ustawienia[3].toInt());
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
 
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
@@ -424,7 +365,23 @@ void konfigpwm_json() {
   server.send(200, "application/json", bufS);
 }
 
-void ustaw_godz_json(){
+void zmienpwm_json() {
+  byte i,pwm;
+  String bufS, id, val;
+  LEDPwm *_swiatlo;
+
+  id = server.arg("id");
+  val = server.arg("val");
+  i = id.toInt() - 1;
+  pwm = val.toInt();
+  _swiatlo = Swiatlo[i];
+  _swiatlo->ustawPwm(pwm);
+
+  bufS = "{\"pwm\":\"" + val + "\",\"id\":\"" + id + "\"}";
+  server.send(200, "application/json", bufS);
+}
+
+void ustaw_data_godz_json(){
   uint16_t rok;
   uint8_t miesiac, dzien, godzina, minuta;
   String bufS;
@@ -441,10 +398,21 @@ void ustaw_godz_json(){
   minuta = bufS.toInt();
 
   dt = RtcDateTime(rok, miesiac, dzien, godzina, minuta, 0);
-  zapiszCzas(0);
+  zapiszCzas(Ustawienia[3].toInt());
   ustawPWM();
 
   bufS = "{\"rok\":\"" + String(rok) + "\",\"miesiac\":\"" + String(miesiac) + "\",\"dzien\":\"" + String(dzien) + "\",\"godzina\":\"" + String(godzina) + "\",\"minuta\":\"" + String(minuta) + "\"}";
+  server.send(200, "application/json", bufS);
+}
+
+void ustaw_strefa_czasowa_json(){
+  String bufS;
+
+  Ustawienia[3] = server.arg("val");
+  pobierzCzas(Ustawienia[3].toInt());
+  ustawPWM();
+
+  bufS = "{\"strefa_czasowa\":\"" + Ustawienia[3] + "\"}";
   server.send(200, "application/json", bufS);
 }
 
@@ -459,7 +427,7 @@ void resetwifi_json(){
 void loop2() {
   unsigned int teraz;
 
-  pobierzCzas(0);
+  pobierzCzas(Ustawienia[3].toInt());
   teraz = dt.Hour() * 60 + dt.Minute();
 
   Swiatlo1.Update(teraz);
@@ -496,6 +464,7 @@ void setup() {
   Ustawienia[0] = Ver; //wersja
   Ustawienia[1] = String(ilePWM); //iloscPWM
   Ustawienia[2] = HW; //sprzet
+  Ustawienia[3] = "2"; //strefa czasowa
 
   ESP.wdtEnable(10000);
   pinMode(ResetPin, INPUT_PULLUP);
@@ -527,18 +496,18 @@ void setup() {
   if (!Rtc.IsDateTimeValid()) {
     //Rtc.SetDateTime(compiled);
     dt = compiled;
-    zapiszCzas(0);
+    zapiszCzas(Ustawienia[3].toInt());
   }
   if (!Rtc.GetIsRunning()) {
     Rtc.SetIsRunning(true);
   }
   //dt = Rtc.GetDateTime();
   //dt += gmt;
-  pobierzCzas(0);
+  pobierzCzas(Ustawienia[3].toInt());
   if (dt < compiled) {
     //Rtc.SetDateTime(compiled);
     dt = compiled;
-    zapiszCzas(0);
+    zapiszCzas(Ustawienia[3].toInt());
   }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
@@ -562,6 +531,7 @@ void setup() {
     Ustawienia[0] = Ver;
     Ustawienia[1] = String(ilePWM);
     Ustawienia[2] = HW;
+    Ustawienia[3] = "2";
     zapiszUstawienia();
     bufS = "";
     for (i = 0; i < ilePWM; i++) {
@@ -600,7 +570,9 @@ void setup() {
   server.on("/pwm_all.json", pwm_all_json);
   server.on("/onoff.json", onoff_json);
   server.on("/konfigpwm.json", konfigpwm_json);
-  server.on("/ustaw_data_godz.json", ustaw_godz_json);
+  server.on("/zmienpwm.json", zmienpwm_json);
+  server.on("/ustaw_data_godz.json", ustaw_data_godz_json);
+  server.on("/ustaw_strefa_czasowa.json", ustaw_strefa_czasowa_json);
   server.on("/resetWifi.json", resetwifi_json);
   server.serveStatic("/", SPIFFS, "/root.html", "max-age=86400");
   server.serveStatic("/js", SPIFFS, "/js", "max-age=86400");

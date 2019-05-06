@@ -107,6 +107,19 @@
       //---zmiana PWM---
       $('.pwm').change(function() {
         $('#label-'+$(this).prop('id')).text($(this).prop('value'));
+        var id = $(this).prop('id');
+        id = id.substring(id.length - 1, id.length);
+        var val = $(this).prop('value');
+        $.ajax({
+        		type: 'POST',
+        		url:'/zmienpwm.json',
+        		dataType : 'json',
+        		data: { id: id, val: val },
+        		success: function(result) {
+        		    //console.log('');
+        		},
+        		error: function(jqXHR, errorText, errorThrown) { console.log('ON/OFF: '+errorText);	}
+        	});
       });
       //---wł/wył kanał---
       $('.swpwm').change(function() {
@@ -171,7 +184,7 @@
         console.log(id+' '+typ+' '+val);
         konfigpwm_json(id,typ,val);
       });
-      //---ustaw date godzine---
+      //---ustaw data godzina---
       $('#data_godzina').change(function() {
         var buf = $(this).prop('value');
         var regex = /[\/, ]/gi;
@@ -183,6 +196,22 @@
         		data: { rok: data_godzina[0],miesiac: data_godzina[1],dzien: data_godzina[2],godzina: data_godzina[3],minuta: data_godzina[4] },
         		success: function(result) {
         			//console.log(result);
+              ustawienia_json();
+        		},
+        		error: function(jqXHR, errorText, errorThrown) { console.log('data_godzina: '+errorText);	}
+        	});
+      });
+      //---ustaw strefa czasowa---
+      $('#strefa_czasowa').change(function() {
+        var val = $(this).prop('value');
+        $.ajax({
+        		type: 'POST',
+        		url:'/ustaw_strefa_czasowa.json',
+        		dataType : 'json',
+        		data: { val: val },
+        		success: function(result) {
+        			//console.log(result);
+              ustawienia_json();
         		},
         		error: function(jqXHR, errorText, errorThrown) { console.log('data_godzina: '+errorText);	}
         	});
