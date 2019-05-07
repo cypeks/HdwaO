@@ -17,6 +17,7 @@ https://github.com/cypeks/HdwaO/tree/master/bin
 aby wgrać firmware oraz spiffs można skorzystać z esptool (https://github.com/espressif/esptool):
 
 esptool.py --baud 115200 write_flash 0x00000000 firmware_8266-4M1.bin
+
 esptool.py --baud 115200 write_flash 0x00300000 spiffs_8266-4M1.bin
 
 Dokładam wszelkich starań aby oprogramowanie było funkcjonalne i bezpieczne, jednak nie biorę odpowiedzialności za działanie niezgodne z oczekiwaniami oraz za szkody powstałe w wyniku użytkowania niniejszego oprogramowania.
