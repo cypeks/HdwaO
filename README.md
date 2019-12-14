@@ -21,3 +21,10 @@ esptool.py --baud 115200 write_flash 0x00000000 firmware_8266-4M1.bin
 esptool.py --baud 115200 write_flash 0x00300000 spiffs_8266-4M1.bin
 
 Dokładam wszelkich starań aby oprogramowanie było funkcjonalne i bezpieczne, jednak nie biorę odpowiedzialności za działanie niezgodne z oczekiwaniami oraz za szkody powstałe w wyniku użytkowania niniejszego oprogramowania.
+
+Historia zmian:
+
+2.1:
+- plik konfiguracyjny w formacie JSON
+- aktualizacja biblioteki ESP8266HTTPUpdateServer
+- poprawiono kilka drobnych błędów

@@ -112,9 +112,6 @@ Task l2(3000, TASK_FOREVER, &loop2);
 Task l3(5000, TASK_FOREVER, &loop3);
 Scheduler runner;
 
-#define IU 4 //ilosc ustawien
-String Ustawienia[IU];
-
 String hostname = "HdwaO_";
 boolean rest=0;
 
@@ -163,12 +160,7 @@ bool ladujConfig() {
     return false;
   }
 
-  // Allocate a buffer to store contents of the file.
   std::unique_ptr<char[]> buf(new char[size]);
-
-  // We don't use String here because ArduinoJson library requires the input
-  // buffer to be mutable. If you don't use ArduinoJson, you may as well
-  // use configFile.readString instead.
   filecfg.readBytes(buf.get(), size);
 
   DynamicJsonDocument doc(ROZMIAR_JSON_CFG_BUF);
@@ -179,7 +171,6 @@ bool ladujConfig() {
   }
 
   SC = doc["SC"];
-  //Ustawienia[3] = String(SC);
 
   for (i = 0; i < ilePWM; i++) {
     for (j = 0; j < 8; j++) {
@@ -187,12 +178,8 @@ bool ladujConfig() {
     }
   }
 
-  //const char* serverName = doc["serverName"];
-  //const char* accessToken = doc["accessToken"];
-
   return true;
 }
-
 
 void zapiszConfig() {
   File filecfg;
@@ -208,44 +195,12 @@ void zapiszConfig() {
     doc["PWM"].add(doc2);
   }
 
-  //SC = Ustawienia[3].toInt();
   doc["SC"] = SC;
 
   filecfg = SPIFFS.open("/config.json", "w");
   serializeJson(doc, filecfg);
   filecfg.close();
   delay(100);
-}
-
-void zapiszPWM() {
-  File filecfg;
-  byte i,j;
-  String bufS;
-
-  bufS = "";
-  for (i = 0; i < ilePWM; i++) {
-    for (j = 0; j < 8; j++) {
-      bufS += String(PWM[i][j]) + "|";
-    }
-  }
-  filecfg = SPIFFS.open("/pwm.cfg", "w");
-  filecfg.print(bufS);
-  filecfg.close();
-  zapiszConfig();
-}
-
-void zapiszUstawienia(){
-  byte i;
-  File filecfg;
-  String bufS;
-
-  for(i = 0; i < IU; i++){
-    bufS += Ustawienia[i] + "|";
-  }
-  filecfg = SPIFFS.open("/ustawienia.cfg", "w");
-  filecfg.print(bufS);
-  filecfg.close();
-  zapiszConfig();
 }
 
 void resetwifi() {
@@ -332,7 +287,7 @@ void info_json(){
   String json, hostname="HdwaO_";
   RtcTemperature temp = Rtc.GetTemperature();
   for(i = 8; i < 12; i++) hostname += String(MAC_char[i]);
-  json = "{\"ver\":\""+Ustawienia[0]+"\",\"ilepwm\":\""+Ustawienia[1]+"\",\"mac\":\""+String(WiFi.macAddress())+"\",\"free_flash\":\""+String(ESP.getFreeSketchSpace())+"\",\"free_ram\":\""+String(ESP.getFreeHeap())+"\",\"vcc\":\""+String(ESP.getVcc())+"\",\"rtctemp\": \""+String(temp.AsFloatDegC())+"\",\"hostname\": \""+hostname+"\"}";
+  json = "{\"ver\":\""+String(Ver)+"\",\"ilepwm\":\""+String(ilePWM)+"\",\"mac\":\""+String(WiFi.macAddress())+"\",\"free_flash\":\""+String(ESP.getFreeSketchSpace())+"\",\"free_ram\":\""+String(ESP.getFreeHeap())+"\",\"vcc\":\""+String(ESP.getVcc())+"\",\"rtctemp\": \""+String(temp.AsFloatDegC())+"\",\"hostname\": \""+hostname+"\"}";
 
   server.send(200, "application/json", json);
 }
@@ -372,7 +327,7 @@ void onoff_json() {
 
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
-  zapiszPWM();
+  zapiszConfig();
 
   bufS = "{\"pwm\":\"" + String(_swiatlo->pobierzPwm()) + "\"}";
   server.send(200, "application/json", bufS);
@@ -431,7 +386,7 @@ void konfigpwm_json() {
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
 
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
-  zapiszPWM();
+  zapiszConfig();
 
   bufS = "{\"pwm\":\"" + String(_swiatlo->pobierzPwm()) + "\",\"id\":\"" + id + "\"}";
   server.send(200, "application/json", bufS);
@@ -536,12 +491,7 @@ void setup() {
   File filecfg;
 
   //Serial.begin(115200);
-  
-  Ustawienia[0] = Ver; //wersja
-  Ustawienia[1] = String(ilePWM); //iloscPWM
-  Ustawienia[2] = HW; //sprzet
-  Ustawienia[3] = "2"; //strefa czasowa
-
+ 
   ESP.wdtEnable(10000);
   pinMode(ResetPin, INPUT_PULLUP);
   delay(1);
