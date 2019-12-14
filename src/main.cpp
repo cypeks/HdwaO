@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#define Ver "2.0"
+#define Ver "2.1"
 #define HW "ESP8266-12"
 
 #include <LEDPwm2.h>
@@ -8,6 +8,7 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
+#include <ArduinoJson.h>
 #include <FS.h>
 #include <WiFiManager.h>
 #include <Wire.h>
@@ -16,8 +17,9 @@
 #include <TaskScheduler.h>
 
 ADC_MODE(ADC_VCC);
+#define ROZMIAR_JSON_CFG_BUF 1191 // Rozmiar bufora dla zapisu konfiguracji json
 
-#define EPOCH2000 946684800 //  Roznica sekund miedzy 1970.01.01 a 2000.01.01
+#define EPOCH2000 946684800 // Roznica sekund miedzy 1970.01.01 a 2000.01.01
 RtcDS3231<TwoWire> Rtc(Wire);
 RtcDateTime dt;
 
@@ -43,7 +45,6 @@ Timezone EE(EEST, EET);
 TimeChangeRule msk = {"MSK", Last, Sun, Mar, 1, 180};
 Timezone MSK(msk);
 
-
 Timezone *Timezones[6] = {
   &UTC,
   &WE,
@@ -54,6 +55,8 @@ Timezone *Timezones[6] = {
 };
 
 TimeChangeRule *tcr;
+
+byte SC = 2;
 
 #define WIFIMAN_TIMEOUT 300
 uint8_t MAC_array[6];
@@ -136,13 +139,82 @@ void ustawPWM() {
   LEDPwm *_swiatlo;
   byte i;
 
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
   teraz = dt.Hour() * 60 + dt.Minute();
 
   for(i=0;i<ilePWM;i++){
     _swiatlo = Swiatlo[i];
     _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
   }
+}
+
+bool ladujConfig() {
+  byte i,j;
+  File filecfg = SPIFFS.open("/config.json", "r");
+
+  if (!filecfg) {
+    Serial.println("Failed to open config file");
+    return false;
+  }
+
+  size_t size = filecfg.size();
+  if (size > 1024) {
+    Serial.println("Config file size is too large");
+    return false;
+  }
+
+  // Allocate a buffer to store contents of the file.
+  std::unique_ptr<char[]> buf(new char[size]);
+
+  // We don't use String here because ArduinoJson library requires the input
+  // buffer to be mutable. If you don't use ArduinoJson, you may as well
+  // use configFile.readString instead.
+  filecfg.readBytes(buf.get(), size);
+
+  DynamicJsonDocument doc(ROZMIAR_JSON_CFG_BUF);
+  auto error = deserializeJson(doc, buf.get());
+  if (error) {
+    Serial.println("Failed to parse config file");
+    return false;
+  }
+
+  SC = doc["SC"];
+  //Ustawienia[3] = String(SC);
+
+  for (i = 0; i < ilePWM; i++) {
+    for (j = 0; j < 8; j++) {
+      PWM[i][j] = doc["PWM"][i][j];
+    }
+  }
+
+  //const char* serverName = doc["serverName"];
+  //const char* accessToken = doc["accessToken"];
+
+  return true;
+}
+
+
+void zapiszConfig() {
+  File filecfg;
+  byte i,j;
+  DynamicJsonDocument doc(ROZMIAR_JSON_CFG_BUF);
+  StaticJsonDocument<128> doc2;
+
+  for (i = 0; i < ilePWM; i++) {
+    doc2.clear();
+    for (j = 0; j < 8; j++) {
+      doc2.add(PWM[i][j]);
+    }
+    doc["PWM"].add(doc2);
+  }
+
+  //SC = Ustawienia[3].toInt();
+  doc["SC"] = SC;
+
+  filecfg = SPIFFS.open("/config.json", "w");
+  serializeJson(doc, filecfg);
+  filecfg.close();
+  delay(100);
 }
 
 void zapiszPWM() {
@@ -159,6 +231,7 @@ void zapiszPWM() {
   filecfg = SPIFFS.open("/pwm.cfg", "w");
   filecfg.print(bufS);
   filecfg.close();
+  zapiszConfig();
 }
 
 void zapiszUstawienia(){
@@ -172,6 +245,7 @@ void zapiszUstawienia(){
   filecfg = SPIFFS.open("/ustawienia.cfg", "w");
   filecfg.print(bufS);
   filecfg.close();
+  zapiszConfig();
 }
 
 void resetwifi() {
@@ -229,7 +303,7 @@ void root_json(){
 void ustawienia_json(){
   String json;
 
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
 
   json = "{\"data\":\"";
   json += String(dt.Year());
@@ -247,7 +321,7 @@ void ustawienia_json(){
   if(dt.Minute()<10) json += "0";
   json += String(dt.Minute());
   json += "\",";
-  json += "\"strefa_czasowa\":\""+Ustawienia[3]+"\"";
+  json += "\"strefa_czasowa\":\""+String(SC)+"\"";
   json += "}";
 
   server.send(200, "application/json", json);
@@ -294,7 +368,7 @@ void onoff_json() {
   PWM[i][5] = val;
   _swiatlo = Swiatlo[i];
 
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
 
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
@@ -353,7 +427,7 @@ void konfigpwm_json() {
 
   _swiatlo = Swiatlo[i];
 
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
   unsigned int teraz = dt.Hour() * 60 + dt.Minute();
 
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
@@ -396,7 +470,7 @@ void ustaw_data_godz_json(){
   minuta = bufS.toInt();
 
   dt = RtcDateTime(rok, miesiac, dzien, godzina, minuta, 0);
-  zapiszCzas(Ustawienia[3].toInt());
+  zapiszCzas(SC);
   ustawPWM();
 
   bufS = "{\"rok\":\"" + String(rok) + "\",\"miesiac\":\"" + String(miesiac) + "\",\"dzien\":\"" + String(dzien) + "\",\"godzina\":\"" + String(godzina) + "\",\"minuta\":\"" + String(minuta) + "\"}";
@@ -406,11 +480,13 @@ void ustaw_data_godz_json(){
 void ustaw_strefa_czasowa_json(){
   String bufS;
 
-  Ustawienia[3] = server.arg("val");
-  pobierzCzas(Ustawienia[3].toInt());
+  bufS = server.arg("val");
+  SC = bufS.toInt();
+  pobierzCzas(SC);
   ustawPWM();
+  zapiszConfig();
 
-  bufS = "{\"strefa_czasowa\":\"" + Ustawienia[3] + "\"}";
+  bufS = "{\"strefa_czasowa\":\"" + String(SC) + "\"}";
   server.send(200, "application/json", bufS);
 }
 
@@ -425,7 +501,7 @@ void resetwifi_json(){
 void loop2() {
   unsigned int teraz;
 
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
   teraz = dt.Hour() * 60 + dt.Minute();
 
   Swiatlo1.Update(teraz);
@@ -455,10 +531,12 @@ void loop3() {
 }
 //---------------------------------------------------------
 void setup() {
-  byte rst=1, i, j;
+  byte i;
   String bufS;
   File filecfg;
 
+  //Serial.begin(115200);
+  
   Ustawienia[0] = Ver; //wersja
   Ustawienia[1] = String(ilePWM); //iloscPWM
   Ustawienia[2] = HW; //sprzet
@@ -477,11 +555,15 @@ void setup() {
 
   //--WiFi Manager
   WiFiManager wifiManager;
-  wifiManager.setBreakAfterConfig(true);
-  wifiManager.setTimeout(WIFIMAN_TIMEOUT);
+  //wifiManager.setBreakAfterConfig(true);
+  wifiManager.setConfigPortalTimeout(WIFIMAN_TIMEOUT);
   char* ssid = &hostname[0];
   delay(100);
-  wifiManager.autoConnect(ssid,"test12345");
+  if (!wifiManager.autoConnect(ssid,"test12345")) {
+    delay(3000);
+    ESP.reset();
+    delay(5000);
+  }
 
   //--ustawienia RTC
   Wire.begin(0, 2); //(D3, D4)
@@ -490,66 +572,31 @@ void setup() {
 
   if (!Rtc.IsDateTimeValid()) {
     dt = compiled;
-    zapiszCzas(Ustawienia[3].toInt());
+    zapiszCzas(SC);
   }
   if (!Rtc.GetIsRunning()) {
     Rtc.SetIsRunning(true);
   }
-  pobierzCzas(Ustawienia[3].toInt());
+  pobierzCzas(SC);
   if (dt < compiled) {
     dt = compiled;
-    zapiszCzas(Ustawienia[3].toInt());
+    zapiszCzas(SC);
   }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
 
   //--odczyt/zapis konfiguracji
   SPIFFS.begin();
-  filecfg = SPIFFS.open("/ustawienia.cfg", "r");
-  if (!filecfg) {
-    rst = 0;
-    zapiszUstawienia();
-  } else {
-    for(i = 0; i < IU; i++){
-      Ustawienia[i] = filecfg.readStringUntil('|');
-    }
-    filecfg.close();
-    if(Ustawienia[0] != Ver) rst = 0;
-    if(Ustawienia[1].toInt() != ilePWM) rst = 0;
+  if(!ladujConfig()){
+    zapiszConfig();
   }
-  //rst = 0; //reset ustawien
-  if (rst != 1) {
-    Ustawienia[0] = Ver;
-    Ustawienia[1] = String(ilePWM);
-    Ustawienia[2] = HW;
-    Ustawienia[3] = "2";
-    zapiszUstawienia();
-    bufS = "";
-    for (i = 0; i < ilePWM; i++) {
-      for (j = 0; j < 8; j++) {
-        bufS += String(PWM[i][j]) + "|";
-      }
-    }
-    filecfg = SPIFFS.open("/pwm.cfg", "w");
-    filecfg.print(bufS);
-    filecfg.close();
-    //wifiManager.resetSettings();
-  } else {
-    filecfg = SPIFFS.open("/pwm.cfg", "r");
-    for (i = 0; i < ilePWM; i++) {
-      for (j = 0; j < 8; j++) {
-        bufS = filecfg.readStringUntil('|');
-        PWM[i][j] = bufS.toInt();
-      }
-    }
-    filecfg.close();
-    //--scheduler
-    runner.init();
-    runner.addTask(l2);
-    runner.addTask(l3);
-    l2.enable();
-    l3.enable();
-  }
+  
+  //--scheduler
+  runner.init();
+  runner.addTask(l2);
+  runner.addTask(l3);
+  l2.enable();
+  l3.enable();
 
   //---serwer HTTP
   MDNS.begin(ssid);
@@ -569,6 +616,7 @@ void setup() {
   server.serveStatic("/js", SPIFFS, "/js", "max-age=86400");
   server.serveStatic("/css", SPIFFS, "/css", "max-age=86400");
   server.serveStatic("/fonts", SPIFFS, "/fonts", "max-age=86400");
+  server.serveStatic("/config.json", SPIFFS, "/config.json", "max-age=86400");
   server.begin();
   MDNS.addService("http", "tcp", 80);
 
