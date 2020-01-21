@@ -1,6 +1,6 @@
 # HdwaO
 
-Do kompilacji kodu użyto środowiska Atom + Plaformio.
+Do kompilacji kodu użyto środowiska VSCode + Plaformio.
 
 Wymagane biblioteki:
 - lib/LEDPwm2 - biblioteka autorska
@@ -22,7 +22,14 @@ esptool.py --baud 115200 write_flash 0x00300000 spiffs_8266-4M1.bin
 
 Dokładam wszelkich starań aby oprogramowanie było funkcjonalne i bezpieczne, jednak nie biorę odpowiedzialności za działanie niezgodne z oczekiwaniami oraz za szkody powstałe w wyniku użytkowania niniejszego oprogramowania.
 
+
 Historia zmian:
+
+2.2:
+- aktualizacja jquery v3.4.1
+- aktualizacja bootstrap v4.4.1
+- optymalizacja kodu
+- naprawiono problem z resetem ustawień WiFi
 
 2.1:
 - plik konfiguracyjny w formacie JSON

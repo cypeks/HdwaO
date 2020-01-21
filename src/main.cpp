@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
-#define Ver "2.1"
+#define Ver "2.2"
+//#define HW "ESP8285"
 #define HW "ESP8266-12"
 
 #include <LEDPwm2.h>
@@ -17,13 +18,13 @@
 #include <TaskScheduler.h>
 
 ADC_MODE(ADC_VCC);
-#define ROZMIAR_JSON_CFG_BUF 1191 // Rozmiar bufora dla zapisu konfiguracji json
+#define ROZMIAR_JSON_CFG_BUF 1210 // Rozmiar bufora dla zapisu konfiguracji json
 
 #define EPOCH2000 946684800 // Roznica sekund miedzy 1970.01.01 a 2000.01.01
 RtcDS3231<TwoWire> Rtc(Wire);
 RtcDateTime dt;
 
-// UTC
+// UTC 
 TimeChangeRule utcRule = {"UTC", Last, Sun, Mar, 1, 0};     // UTC
 Timezone UTC(utcRule);
 // Western European Time (London, Belfast)
@@ -55,12 +56,12 @@ Timezone *Timezones[6] = {
 };
 
 TimeChangeRule *tcr;
-
-byte SC = 2;
+uint8_t SC = 2;
 
 #define WIFIMAN_TIMEOUT 300
 uint8_t MAC_array[6];
 char MAC_char[13];
+uint8_t WM = 1;
 
 #define ResetPin 1    //Pin (D10/TXD0)
 #define ilePWM 8      //Okreslić ilość wyjść PWM
@@ -75,7 +76,7 @@ char MAC_char[13];
 #define PwmPin7 15    //Pin PWM (D8)
 #define PwmPin8 16    //Pin PWM (D0)
 
-byte PWM[ilePWM][8] = {
+uint8_t PWM[ilePWM][8] = {
   { 10, 0, 20, 0, 60, 1, 100, 0 },
   { 10, 0, 20, 0, 60, 0, 100, 0 },
   { 10, 0, 20, 0, 60, 0, 100, 0 },
@@ -106,12 +107,42 @@ LEDPwm *Swiatlo[ilePWM] = {
   &Swiatlo8
 };
 
-void loop2();
-void loop3();
-Task l2(3000, TASK_FOREVER, &loop2);
-Task l3(5000, TASK_FOREVER, &loop3);
+//---TaskScheduler-----------------------------------------
 Scheduler runner;
+//void loop2();
+void loop3();
+//Task l2(3*TASK_SECOND, TASK_FOREVER, &loop2, &runner, true);
+Task l3(5*TASK_SECOND, TASK_FOREVER, &loop3, &runner, true);
 
+void task1();
+Task t1(3*TASK_SECOND, TASK_FOREVER, &task1, &runner, false);
+void task2();
+Task t2(3*TASK_SECOND, TASK_FOREVER, &task2, &runner, false);
+void task3();
+Task t3(3*TASK_SECOND, TASK_FOREVER, &task3, &runner, false);
+void task4();
+Task t4(3*TASK_SECOND, TASK_FOREVER, &task4, &runner, false);
+void task5();
+Task t5(3*TASK_SECOND, TASK_FOREVER, &task5, &runner, false);
+void task6();
+Task t6(3*TASK_SECOND, TASK_FOREVER, &task6, &runner, false);
+void task7();
+Task t7(3*TASK_SECOND, TASK_FOREVER, &task7, &runner, false);
+void task8();
+Task t8(3*TASK_SECOND, TASK_FOREVER, &task8, &runner, false);
+
+Task *T[ilePWM] = {
+  &t1,
+  &t2,
+  &t3,
+  &t4,
+  &t5,
+  &t6,
+  &t7,
+  &t8
+};
+
+//---WiFi--------------------------------------------------
 String hostname = "HdwaO_";
 boolean rest=0;
 
@@ -119,22 +150,22 @@ ESP8266WebServer server(80);
 ESP8266HTTPUpdateServer httpUpdater;
 
 //---funkcje-----------------------------------------------
-void pobierzCzas(byte strefa) {
+void pobierzCzas(uint8_t strefa) {
   dt = Rtc.GetDateTime();
   time_t local = Timezones[strefa]->toLocal(dt + EPOCH2000, &tcr);
   dt = local - EPOCH2000;
 }
 
-void zapiszCzas(byte strefa) {
+void zapiszCzas(uint8_t strefa) {
   time_t utc = Timezones[strefa]->toUTC(dt + EPOCH2000);
   dt = utc - EPOCH2000;
   Rtc.SetDateTime(dt);
 }
 
 void ustawPWM() {
-  unsigned int teraz;
+  uint32_t teraz;
   LEDPwm *_swiatlo;
-  byte i;
+  uint8_t i;
 
   pobierzCzas(SC);
   teraz = dt.Hour() * 60 + dt.Minute();
@@ -146,17 +177,15 @@ void ustawPWM() {
 }
 
 bool ladujConfig() {
-  byte i,j;
+  uint8_t i,j;
   File filecfg = SPIFFS.open("/config.json", "r");
 
   if (!filecfg) {
-    Serial.println("Failed to open config file");
     return false;
   }
 
   size_t size = filecfg.size();
   if (size > 1024) {
-    Serial.println("Config file size is too large");
     return false;
   }
 
@@ -166,11 +195,11 @@ bool ladujConfig() {
   DynamicJsonDocument doc(ROZMIAR_JSON_CFG_BUF);
   auto error = deserializeJson(doc, buf.get());
   if (error) {
-    Serial.println("Failed to parse config file");
     return false;
   }
 
   SC = doc["SC"];
+  WM = doc["WM"];
 
   for (i = 0; i < ilePWM; i++) {
     for (j = 0; j < 8; j++) {
@@ -183,7 +212,7 @@ bool ladujConfig() {
 
 void zapiszConfig() {
   File filecfg;
-  byte i,j;
+  uint8_t i,j;
   DynamicJsonDocument doc(ROZMIAR_JSON_CFG_BUF);
   StaticJsonDocument<128> doc2;
 
@@ -196,6 +225,7 @@ void zapiszConfig() {
   }
 
   doc["SC"] = SC;
+  doc["WM"] = 1;
 
   filecfg = SPIFFS.open("/config.json", "w");
   serializeJson(doc, filecfg);
@@ -206,18 +236,89 @@ void zapiszConfig() {
 void resetwifi() {
   WiFiManager wifiManager;
   wifiManager.resetSettings();
-  delay(10);
+  rest = 1;
+  delay(100);
 }
 
 void resetuj() {
-  SPIFFS.remove("/ustawienia.cfg");
+  SPIFFS.remove("/config.json");
   resetwifi();
-  delay(100);
   rest = 1;
+  delay(100);
 }
+
+uint32_t pobierz_teraz(){
+  pobierzCzas(SC);
+  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
+  return teraz;
+}
+
+void task1() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo1.Update(teraz);
+}
+
+void task2() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo2.Update(teraz);
+}
+
+void task3() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo3.Update(teraz);
+}
+
+void task4() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo4.Update(teraz);
+}
+
+void task5() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo5.Update(teraz);
+}
+
+void task6() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo6.Update(teraz);
+}
+
+void task7() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo7.Update(teraz);
+}
+
+void task8() {
+  uint32_t teraz = pobierz_teraz();
+  Swiatlo8.Update(teraz);
+}
+
+uint16_t coiletask(uint8_t czas){
+  uint16_t interwal;
+
+  interwal = czas*3;
+  interwal = floor(interwal/10);
+  return interwal;
+}
+
+void ustaw_task(uint8_t i){
+
+  if(PWM[i][5] == 1){
+    uint16_t interwal = coiletask(PWM[i][4]);
+    if(interwal != T[i]->getInterval()){
+      T[i]->setInterval(interwal);
+    }
+    if(!T[i]->isEnabled()){
+      T[i]->enable();
+    }
+  }else{
+    T[i]->disable();
+  }
+}
+
 //---json API----------------------------------------------
 void root_json(){
-  byte i;
+  uint8_t i;
   String json;
   LEDPwm *_swiatlo;
 
@@ -277,13 +378,15 @@ void ustawienia_json(){
   json += String(dt.Minute());
   json += "\",";
   json += "\"strefa_czasowa\":\""+String(SC)+"\"";
+  json += ",";
+  json += "\"wifiman\":\"1\"";
   json += "}";
 
   server.send(200, "application/json", json);
 }
 
 void info_json(){
-  byte i;
+  uint8_t i;
   String json, hostname="HdwaO_";
   RtcTemperature temp = Rtc.GetTemperature();
   for(i = 8; i < 12; i++) hostname += String(MAC_char[i]);
@@ -293,7 +396,7 @@ void info_json(){
 }
 
 void pwm_all_json() {
-  byte i,j=0;
+  uint8_t i,j=0;
   LEDPwm *_swiatlo;
   String bufS="{\"swiatlo\":[";
   for(i=0;i<ilePWM;i++){
@@ -309,7 +412,7 @@ void pwm_all_json() {
 
 void onoff_json() {
   String bufS;
-  byte i,j;
+  uint8_t i,j;
   boolean val;
   LEDPwm *_swiatlo;
 
@@ -325,16 +428,17 @@ void onoff_json() {
 
   pobierzCzas(SC);
 
-  unsigned int teraz = dt.Hour() * 60 + dt.Minute();
+  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
   zapiszConfig();
+  ustaw_task(i);
 
   bufS = "{\"pwm\":\"" + String(_swiatlo->pobierzPwm()) + "\"}";
   server.send(200, "application/json", bufS);
 }
 
 void konfigpwm_json() {
-  byte i,j,x;
+  uint8_t i,j,x;
   String bufS, id, typ, val;
   LEDPwm *_swiatlo;
 
@@ -366,6 +470,7 @@ void konfigpwm_json() {
     j = 4;
     x = val.toInt();
     PWM[i][j] = x;
+    ustaw_task(i);
   }else if(typ == "maxpwm"){
     j = 6;
     x = val.toInt();
@@ -383,7 +488,7 @@ void konfigpwm_json() {
   _swiatlo = Swiatlo[i];
 
   pobierzCzas(SC);
-  unsigned int teraz = dt.Hour() * 60 + dt.Minute();
+  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
 
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
   zapiszConfig();
@@ -393,7 +498,7 @@ void konfigpwm_json() {
 }
 
 void zmienpwm_json() {
-  byte i,pwm;
+  uint8_t i,pwm;
   String bufS, id, val;
   LEDPwm *_swiatlo;
 
@@ -440,7 +545,7 @@ void ustaw_strefa_czasowa_json(){
   pobierzCzas(SC);
   ustawPWM();
   zapiszConfig();
-
+  
   bufS = "{\"strefa_czasowa\":\"" + String(SC) + "\"}";
   server.send(200, "application/json", bufS);
 }
@@ -450,11 +555,13 @@ void resetwifi_json(){
     resetwifi();
     rest = 1;
   }
-  server.send(200, "application/json", "[{}]");
+  server.send(200, "application/json", "{\"reset\":\"ok\"}");
 }
 //---------------------------------------------------------
+
+/*
 void loop2() {
-  unsigned int teraz;
+  uint32_t teraz;
 
   pobierzCzas(SC);
   teraz = dt.Hour() * 60 + dt.Minute();
@@ -476,6 +583,7 @@ void loop2() {
   Swiatlo8.Update(teraz);
   delay(1);
 }
+*/
 
 void loop3() {
   if(digitalRead(ResetPin) == LOW) resetuj();
@@ -486,15 +594,19 @@ void loop3() {
 }
 //---------------------------------------------------------
 void setup() {
-  byte i;
+  uint8_t i;
   String bufS;
   File filecfg;
-
-  //Serial.begin(115200);
  
   ESP.wdtEnable(10000);
   pinMode(ResetPin, INPUT_PULLUP);
   delay(1);
+
+  //--odczyt/zapis konfiguracji
+  SPIFFS.begin();
+  if(!ladujConfig()){
+    zapiszConfig();
+  }
 
   WiFi.macAddress(MAC_array);
   for (i = 0; i < sizeof(MAC_array); ++i){
@@ -505,7 +617,6 @@ void setup() {
 
   //--WiFi Manager
   WiFiManager wifiManager;
-  //wifiManager.setBreakAfterConfig(true);
   wifiManager.setConfigPortalTimeout(WIFIMAN_TIMEOUT);
   char* ssid = &hostname[0];
   delay(100);
@@ -534,19 +645,23 @@ void setup() {
   }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
-
-  //--odczyt/zapis konfiguracji
-  SPIFFS.begin();
-  if(!ladujConfig()){
-    zapiszConfig();
-  }
   
   //--scheduler
-  runner.init();
-  runner.addTask(l2);
-  runner.addTask(l3);
-  l2.enable();
-  l3.enable();
+  for(i = 0; i < ilePWM; i++){
+    if(PWM[i][5] == 1){
+      if(!T[i]->isEnabled()){
+        T[i]->setInterval(coiletask(PWM[i][4]));
+        T[i]->enable();
+      }
+    }else{
+      T[i]->disable();
+    }
+  }
+  //runner.init();
+  //runner.addTask(l2);
+  //runner.addTask(l3);
+  //l2.enable();
+  //l3.enable();
 
   //---serwer HTTP
   MDNS.begin(ssid);
@@ -561,7 +676,7 @@ void setup() {
   server.on("/zmienpwm.json", zmienpwm_json);
   server.on("/ustaw_data_godz.json", ustaw_data_godz_json);
   server.on("/ustaw_strefa_czasowa.json", ustaw_strefa_czasowa_json);
-  server.on("/resetWifi.json", resetwifi_json);
+  server.on("/resetwifi.json", resetwifi_json);
   server.serveStatic("/", SPIFFS, "/root.html", "max-age=86400");
   server.serveStatic("/js", SPIFFS, "/js", "max-age=86400");
   server.serveStatic("/css", SPIFFS, "/css", "max-age=86400");

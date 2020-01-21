@@ -51,7 +51,7 @@ LEDPwm::LEDPwm(uint8_t pin)
   }
 
   void LEDPwm::ustaw(uint8_t onh, uint8_t onm, uint8_t offh, uint8_t offm, uint8_t time, uint32_t teraz, bool active, uint8_t max, bool rewers){
-	uint16_t t;
+	uint32_t t;
 	uint16_t off_end;
 	uint16_t on_end;
 	bool night = 0;

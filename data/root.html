@@ -209,6 +209,16 @@
       $('#resetWiFiOK').on('click', function() {
         $('#resetWiFiModal').modal('hide');
         $('#infoWiFiModal').modal('show');
+        $.ajax({
+        		type: 'POST',
+        		url:'/resetwifi.json',
+        		dataType : 'json',
+        		data: { resetwifi: "reset" },
+        		success: function(result) {
+              console.log('reset WiFi');
+        		},
+        		error: function(jqXHR, errorText, errorThrown) { console.log('reset_wifi: '+errorText);	}
+        	});
       });
     </script>
   </body>
