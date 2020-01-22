@@ -16,9 +16,14 @@
 #include <RtcDS3231.h>
 #include <Timezone.h>
 #include <TaskScheduler.h>
+#include <U8g2lib.h>
+
 
 ADC_MODE(ADC_VCC);
 #define ROZMIAR_JSON_CFG_BUF 1210 // Rozmiar bufora dla zapisu konfiguracji json
+
+//OLED SSD1306 I2C
+U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 #define EPOCH2000 946684800 // Roznica sekund miedzy 1970.01.01 a 2000.01.01
 RtcDS3231<TwoWire> Rtc(Wire);
@@ -109,10 +114,10 @@ LEDPwm *Swiatlo[ilePWM] = {
 
 //---TaskScheduler-----------------------------------------
 Scheduler runner;
-//void loop2();
 void loop3();
-//Task l2(3*TASK_SECOND, TASK_FOREVER, &loop2, &runner, true);
 Task l3(5*TASK_SECOND, TASK_FOREVER, &loop3, &runner, true);
+void pisz_ekran();
+Task tEkran(1*TASK_SECOND, TASK_FOREVER, &pisz_ekran, &runner, true);
 
 void task1();
 Task t1(3*TASK_SECOND, TASK_FOREVER, &task1, &runner, false);
@@ -162,13 +167,17 @@ void zapiszCzas(uint8_t strefa) {
   Rtc.SetDateTime(dt);
 }
 
+uint32_t pobierzTeraz(){
+  pobierzCzas(SC);
+  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
+  return teraz;
+}
+
 void ustawPWM() {
-  uint32_t teraz;
   LEDPwm *_swiatlo;
   uint8_t i;
 
-  pobierzCzas(SC);
-  teraz = dt.Hour() * 60 + dt.Minute();
+  uint32_t teraz = pobierzTeraz();
 
   for(i=0;i<ilePWM;i++){
     _swiatlo = Swiatlo[i];
@@ -247,49 +256,43 @@ void resetuj() {
   delay(100);
 }
 
-uint32_t pobierz_teraz(){
-  pobierzCzas(SC);
-  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
-  return teraz;
-}
-
 void task1() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo1.Update(teraz);
 }
 
 void task2() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo2.Update(teraz);
 }
 
 void task3() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo3.Update(teraz);
 }
 
 void task4() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo4.Update(teraz);
 }
 
 void task5() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo5.Update(teraz);
 }
 
 void task6() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo6.Update(teraz);
 }
 
 void task7() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo7.Update(teraz);
 }
 
 void task8() {
-  uint32_t teraz = pobierz_teraz();
+  uint32_t teraz = pobierzTeraz();
   Swiatlo8.Update(teraz);
 }
 
@@ -316,6 +319,72 @@ void ustaw_task(uint8_t i){
   }
 }
 
+int8_t jakoscWifi() {
+  if (WiFi.status() != WL_CONNECTED)
+    return -1;
+  int16_t dBm = WiFi.RSSI();
+  if (dBm <= -100)
+    return 0;
+  if (dBm >= -50)
+    return 100;
+  return 2 * (dBm + 100);
+}
+
+void pisz_ekran(){
+  String datownik, godzina, ip;
+  uint8_t i,pwm;
+  LEDPwm *_swiatlo;
+  
+  ip = WiFi.localIP().toString();
+  datownik = String(dt.Year()) + "/";
+  if(dt.Month()<10) datownik += "0";
+  datownik += String(dt.Month()) + "/";
+  if(dt.Day()<10) datownik += "0";
+  datownik += String(dt.Day());
+  godzina = "";
+  if(dt.Hour()<10) godzina += " ";
+  godzina += String(dt.Hour()) + ":";
+  if(dt.Minute()<10) godzina += "0";
+  godzina += String(dt.Minute());
+
+  int8_t rssi = jakoscWifi();
+
+  u8g2.firstPage();
+  do {
+    u8g2.setFont(u8g2_font_profont12_tn);
+    //IP
+    u8g2.drawStr(0,10,ip.c_str());
+    //datownik
+    u8g2.drawStr(0,64,datownik.c_str());
+    u8g2.drawStr(95,64,godzina.c_str());
+    //wifi BOX
+    if(rssi>=0) u8g2.drawBox(109,8,3,2);
+    if(rssi>20) u8g2.drawBox(113,6,3,4);
+    if(rssi>40) u8g2.drawBox(117,4,3,6);
+    if(rssi>60) u8g2.drawBox(121,2,3,8);
+    if(rssi>80) u8g2.drawBox(125,0,3,10);
+    //PWM
+    for(i = 0; i < ilePWM; i++){
+      _swiatlo = Swiatlo[i-1];
+      pwm = _swiatlo->pobierzPwm();
+      if(pwm > 0){
+        if(pwm > 9){
+          pwm = _swiatlo->pobierzPwm()/3;
+          pwm++;
+        }else{
+          pwm = 2;
+        }
+      }else{
+        pwm = 1;
+      }
+      u8g2.drawBox(i*16+2,50-pwm,12,pwm);
+    }
+    //ramki
+    u8g2.drawHLine(0,12,128);
+    u8g2.drawHLine(0,53,128);
+  } while (u8g2.nextPage());
+}
+
 //---json API----------------------------------------------
 void root_json(){
   uint8_t i;
@@ -327,7 +396,7 @@ void root_json(){
     _swiatlo = Swiatlo[i-1];
     json += "{";
     json += "\"id\":\"" + String(i) + "\",";
-    json += "\"wl\":\"" + String(PWM[i-1][5]) + "\",";
+    json += "\"wl\":\"" + String(PWM[i - 1][5]) + "\",";
     json += "\"pwm\":\"" + String(_swiatlo->pobierzPwm()) + "\",";
     json += "\"onh\":\"";
     if(PWM[i - 1][0] < 10) json += "0";
@@ -426,9 +495,8 @@ void onoff_json() {
   PWM[i][5] = val;
   _swiatlo = Swiatlo[i];
 
-  pobierzCzas(SC);
+  uint32_t teraz = pobierzTeraz();
 
-  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
   zapiszConfig();
   ustaw_task(i);
@@ -487,8 +555,7 @@ void konfigpwm_json() {
 
   _swiatlo = Swiatlo[i];
 
-  pobierzCzas(SC);
-  uint32_t teraz = dt.Hour() * 60 + dt.Minute();
+  uint32_t teraz = pobierzTeraz();
 
   _swiatlo->ustaw(PWM[i][0], PWM[i][1], PWM[i][2], PWM[i][3], PWM[i][4], teraz, PWM[i][5], PWM[i][6], PWM[i][7]);
   zapiszConfig();
@@ -558,33 +625,6 @@ void resetwifi_json(){
   server.send(200, "application/json", "{\"reset\":\"ok\"}");
 }
 //---------------------------------------------------------
-
-/*
-void loop2() {
-  uint32_t teraz;
-
-  pobierzCzas(SC);
-  teraz = dt.Hour() * 60 + dt.Minute();
-
-  Swiatlo1.Update(teraz);
-  delay(1);
-  Swiatlo2.Update(teraz);
-  delay(1);
-  Swiatlo3.Update(teraz);
-  delay(1);
-  Swiatlo4.Update(teraz);
-  delay(1);
-  Swiatlo5.Update(teraz);
-  delay(1);
-  Swiatlo6.Update(teraz);
-  delay(1);
-  Swiatlo7.Update(teraz);
-  delay(1);
-  Swiatlo8.Update(teraz);
-  delay(1);
-}
-*/
-
 void loop3() {
   if(digitalRead(ResetPin) == LOW) resetuj();
   if(rest == 1){
@@ -657,12 +697,10 @@ void setup() {
       T[i]->disable();
     }
   }
-  //runner.init();
-  //runner.addTask(l2);
-  //runner.addTask(l3);
-  //l2.enable();
-  //l3.enable();
 
+  //---OLED SSD1306 I2C
+  u8g2.begin();
+  
   //---serwer HTTP
   MDNS.begin(ssid);
   httpUpdater.setup(&server);
@@ -692,4 +730,5 @@ void loop() {
   server.handleClient();
   delay(1);
   runner.execute();
+  //pisz_ekran();
 }
