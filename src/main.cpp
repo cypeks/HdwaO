@@ -365,7 +365,7 @@ void pisz_ekran(){
     if(rssi>80) u8g2.drawBox(125,0,3,10);
     //PWM
     for(i = 0; i < ilePWM; i++){
-      _swiatlo = Swiatlo[i-1];
+      _swiatlo = Swiatlo[i];
       pwm = _swiatlo->pobierzPwm();
       if(pwm > 0){
         if(pwm > 9){
