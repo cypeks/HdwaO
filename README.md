@@ -26,15 +26,19 @@ Dokładam wszelkich starań aby oprogramowanie było funkcjonalne i bezpieczne, 
 
 ![HdwaO_1](/img/20191027185854.jpg)
 
-##Historia zmian:
+## Historia zmian:
 
-###2.2:
+### 2.2:
 - aktualizacja jquery v3.4.1
 - aktualizacja bootstrap v4.4.1
 - optymalizacja kodu
 - naprawiono problem z resetem ustawień WiFi
-- dodano obsługę wyświetlacza OLED SSD1306 I2C
-###2.1:
+- dodano obsługę wyświetlacza OLED SSD1306 I2C 128x64
+### 2.1:
 - plik konfiguracyjny w formacie JSON
 - aktualizacja biblioteki ESP8266HTTPUpdateServer
 - poprawiono kilka drobnych błędów
+
+![HdwaO_2](/img/20191027185958.jpg)
+![HdwaO_3](/img/20191027190241.jpg)
+![HdwaO_4](/img/20191027190317.jpg)
