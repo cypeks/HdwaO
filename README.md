@@ -1,8 +1,10 @@
 # HdwaO
 
+HdwaO to 8 kanałowy sterownik WiFi oświetlenia LED zaprojektowany z myślą o akwarystyce. Konfigurację sterownika realizuje się za pomocą dostępnego panelu www.
+
 Do kompilacji kodu użyto środowiska VSCode + Plaformio.
 
-Wymagane biblioteki:
+## Wymagane biblioteki:
 - lib/LEDPwm2 - biblioteka autorska
 - lib/ESP8266HTTPUpdateServer - dostosowana do potrzeb projektu biblioteka z projektu: https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266HTTPUpdateServer
 - https://github.com/PaulStoffregen/Time
