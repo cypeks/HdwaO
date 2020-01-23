@@ -24,7 +24,7 @@ esptool.py --baud 115200 write_flash 0x00300000 spiffs_8266-4M1.bin
 ```
 Dokładam wszelkich starań aby oprogramowanie było funkcjonalne i bezpieczne, jednak nie biorę odpowiedzialności za działanie niezgodne z oczekiwaniami oraz za szkody powstałe w wyniku użytkowania niniejszego oprogramowania.
 
-![HdwaO_1](/img/https://raw.githubusercontent.com/cypeks/HdwaO/dev/img/20191027185854.jpg)
+![HdwaO_1](/img/20191027185854.jpg)
 
 ##Historia zmian:
 
