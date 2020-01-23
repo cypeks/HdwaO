@@ -22,14 +22,14 @@
 ADC_MODE(ADC_VCC);
 #define ROZMIAR_JSON_CFG_BUF 1210 // Rozmiar bufora dla zapisu konfiguracji json
 
-//OLED SSD1306 I2C
-U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+//OLED SSD1306 I2C HEX=0x3C DEC=60
+U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE);
 
 #define EPOCH2000 946684800 // Roznica sekund miedzy 1970.01.01 a 2000.01.01
 RtcDS3231<TwoWire> Rtc(Wire);
 RtcDateTime dt;
 
-// UTC 
+// UTC
 TimeChangeRule utcRule = {"UTC", Last, Sun, Mar, 1, 0};     // UTC
 Timezone UTC(utcRule);
 // Western European Time (London, Belfast)
@@ -117,7 +117,7 @@ Scheduler runner;
 void loop3();
 Task l3(5*TASK_SECOND, TASK_FOREVER, &loop3, &runner, true);
 void pisz_ekran();
-Task tEkran(1*TASK_SECOND, TASK_FOREVER, &pisz_ekran, &runner, true);
+Task tEkran(1*TASK_SECOND, TASK_FOREVER, &pisz_ekran, &runner, false);
 
 void task1();
 Task t1(3*TASK_SECOND, TASK_FOREVER, &task1, &runner, false);
@@ -685,7 +685,15 @@ void setup() {
   }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
-  
+
+  //---OLED SSD1306 I2C
+  Wire.beginTransmission(60);
+  uint8_t oled_test = Wire.endTransmission();
+  if(oled_test == 0){
+    u8g2.begin();
+    tEkran.enable();
+  }
+
   //--scheduler
   for(i = 0; i < ilePWM; i++){
     if(PWM[i][5] == 1){
@@ -697,9 +705,6 @@ void setup() {
       T[i]->disable();
     }
   }
-
-  //---OLED SSD1306 I2C
-  u8g2.begin();
   
   //---serwer HTTP
   MDNS.begin(ssid);
