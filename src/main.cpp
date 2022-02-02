@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#define Ver "2.2"
+#define Ver "3.0"
 //#define HW "ESP8285"
 #define HW "ESP8266-12"
 
@@ -10,7 +10,7 @@
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
 #include <ArduinoJson.h>
-#include <FS.h>
+#include <LittleFS.h>
 #include <WiFiManager.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
@@ -187,7 +187,7 @@ void ustawPWM() {
 
 bool ladujConfig() {
   uint8_t i,j;
-  File filecfg = SPIFFS.open("/config.json", "r");
+  File filecfg = LittleFS.open("/config.json", "r");
 
   if (!filecfg) {
     return false;
@@ -236,7 +236,7 @@ void zapiszConfig() {
   doc["SC"] = SC;
   doc["WM"] = 1;
 
-  filecfg = SPIFFS.open("/config.json", "w");
+  filecfg = LittleFS.open("/config.json", "w");
   serializeJson(doc, filecfg);
   filecfg.close();
   delay(100);
@@ -250,7 +250,7 @@ void resetwifi() {
 }
 
 void resetuj() {
-  SPIFFS.remove("/config.json");
+  LittleFS.remove("/config.json");
   resetwifi();
   rest = 1;
   delay(100);
@@ -643,7 +643,7 @@ void setup() {
   delay(1);
 
   //--odczyt/zapis konfiguracji
-  SPIFFS.begin();
+  LittleFS.begin();
   if(!ladujConfig()){
     zapiszConfig();
   }
@@ -708,7 +708,7 @@ void setup() {
   
   //---serwer HTTP
   MDNS.begin(ssid);
-  httpUpdater.setup(&server);
+  //httpUpdater.setup(&server);
 
   server.on("/root.json", root_json);
   server.on("/ustawienia.json", ustawienia_json);
@@ -720,11 +720,11 @@ void setup() {
   server.on("/ustaw_data_godz.json", ustaw_data_godz_json);
   server.on("/ustaw_strefa_czasowa.json", ustaw_strefa_czasowa_json);
   server.on("/resetwifi.json", resetwifi_json);
-  server.serveStatic("/", SPIFFS, "/root.html", "max-age=86400");
-  server.serveStatic("/js", SPIFFS, "/js", "max-age=86400");
-  server.serveStatic("/css", SPIFFS, "/css", "max-age=86400");
-  server.serveStatic("/fonts", SPIFFS, "/fonts", "max-age=86400");
-  server.serveStatic("/config.json", SPIFFS, "/config.json", "max-age=86400");
+  server.serveStatic("/", LittleFS, "/root.html", "max-age=86400");
+  server.serveStatic("/js", LittleFS, "/js", "max-age=86400");
+  server.serveStatic("/css", LittleFS, "/css", "max-age=86400");
+  server.serveStatic("/fonts", LittleFS, "/fonts", "max-age=86400");
+  server.serveStatic("/config.json", LittleFS, "/config.json", "max-age=86400");
   server.begin();
   MDNS.addService("http", "tcp", 80);
 
